@@ -1,10 +1,10 @@
-package ToolBox::Mungers::lc;
+package ToolBox::Mungers::delimiter;
 
 use Modern::Perl;
 
 sub munge {
     my ( $class, $data ) = @_;
-    return lc $data;
+    return "$data ; ";
 }
 
 1;

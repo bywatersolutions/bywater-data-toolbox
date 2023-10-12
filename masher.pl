@@ -4,19 +4,19 @@ use Modern::Perl;
 
 use Data::Dumper;
 use File::Slurp;
+use FindBin;
 use Getopt::Long::Descriptive;
 use Module::Load;
+use Readonly;
 use Text::CSV::Slurp;
 use Try::Tiny;
-use FindBin;
 
 use lib "$FindBin::Bin";
 
 use Koha::Database;
 
-my $mungers = "ToolBox::Mungers::";
-
-my $option_params_regex = qr/(\w+):([\w\/\.-]+)~?(\w+)?/;
+Readonly my $mungers => "ToolBox::Mungers::";
+Readonly my $option_params_regex => qr/(\w+):([\w\/\.-]+)~?(\w+)?/;
 
 my $schema  = Koha::Database->new()->schema();
 my @sources = $schema->sources;
