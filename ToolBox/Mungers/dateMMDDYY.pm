@@ -4,7 +4,9 @@ use Modern::Perl;
 
 =pod
 
-=head1 ToolBox::Mungers::dateMMDDYY
+=head1 dateMMDDYY
+
+=head2 munge
 
 Convert dates in the format mm/dd/yy to ISO
 
@@ -28,7 +30,7 @@ sub munge {
         }
         $data = sprintf "%4d-%02d-%02d", $year, $month, $day;
         if ( $data eq "0000-00-00" ) {
-            $data = $NULL_STRING;
+            $data = q{};
         }
     }
     else {

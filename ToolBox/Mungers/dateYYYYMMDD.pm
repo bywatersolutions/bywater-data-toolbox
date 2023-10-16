@@ -4,7 +4,9 @@ use Modern::Perl;
 
 =pod
 
-=head1 ToolBox::Mungers::dateYYYYMMDD
+=head1 dateYYYYMMDD
+
+=head2 munge
 
 Convert dates in the format YYYYMMDD to ISO
 

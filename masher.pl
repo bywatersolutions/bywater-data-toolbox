@@ -10,12 +10,14 @@ use Module::Load;
 use Readonly;
 use Text::CSV::Slurp;
 use Try::Tiny;
+use Module::Find;
+use Pod::Perldoc;
 
 use lib "$FindBin::Bin";
 
 use Koha::Database;
 
-Readonly my $mungers => "ToolBox::Mungers::";
+Readonly my $mungers             => "ToolBox::Mungers::";
 Readonly my $option_params_regex => qr/(\w+):([\w\/\.-]+)~?(\w+)?/;
 
 my $schema  = Koha::Database->new()->schema();
@@ -41,11 +43,17 @@ my ( $opt, $usage ) = describe_options(
     ],
     [],
     [ 'verbose|v', "print extra stuff" ],
-    [ 'help',      "print usage message and exit", { shortcircuit => 1 } ],
+    [ 'help|h+',   "print usage message and exit", { shortcircuit => 1 } ],
     { show_defaults => 1 },
 );
 
-print( $usage->text ), exit if $opt->help;
+print( $usage->text ) if $opt->help;
+if ( $opt->help > 1 ) {
+    say "\nAVAILABLE TOOLS\n";
+    my @found = useall ToolBox::Mungers;
+    say qx/PERL5LIB=$FindBin::Bin perldoc -T $_/ for @found;
+}
+exit if $opt->help;
 
 my $table = $opt->table;
 

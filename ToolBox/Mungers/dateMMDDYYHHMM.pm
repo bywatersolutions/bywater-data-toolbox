@@ -4,7 +4,9 @@ use Modern::Perl;
 
 =pod
 
-=head1 ToolBox::Mungers::dateMMDDYYHHMM
+=head1 dateMMDDYYHHMM
+
+=item munge
 
 Convert dates in the format mm/dd/yy hh:mm to ISO
 
