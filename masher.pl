@@ -49,7 +49,7 @@ my $schema  = $opt->table ? Koha::Database->new()->schema() : undef;
 my @sources = $schema ? $schema->sources : undef;
 
 print( $usage->text ) if $opt->help;
-if ( $opt->help > 1 ) {
+if ( $opt->help && $opt->help > 1 ) {
     say "\nAVAILABLE TOOLS\n";
     my @found = useall ToolBox::Mungers;
     say qx/PERL5LIB=$FindBin::Bin perldoc -T $_/ for @found;
