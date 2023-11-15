@@ -19,7 +19,7 @@ use lib "/usr/share/koha/lib/";
 require Koha::Database;
 
 Readonly my $mungers             => "ToolBox::Mungers::";
-Readonly my $option_params_regex => qr/(\w+):([\w\/\.-]+)~?(\w+)?/;
+Readonly my $option_params_regex => qr/(\w+):([\w\/\.-]+)~?(\w+)?~?(.*)?/;
 
 my ( $opt, $usage ) = describe_options(
     '%c %o ',
@@ -31,13 +31,13 @@ my ( $opt, $usage ) = describe_options(
     [],
     [
         'col=s@',
-        "<header>:<column>[~<tool>] Repeatable. "
+        "<header>:<column>[~<tool>[~tool-params]] Repeatable. "
             . "Inserts data from the named column into the patron field listed; i.e. BARCODE:cardnumber.",
     ],
     [ 'static|s=s@', '<header>:<value> Repeatable. Inserts static data into the named field.' ],
     [
         'map|m=s@',
-        '<header>:<filename>[~<tool>] Repeatable. Adds the single column of <filename> to the mashed data as <header>'
+        '<header>:<filename>[~<tool>[~tool-params]] Repeatable. Adds the single column of <filename> to the mashed data as <header>'
     ],
     [],
     [ 'verbose|v', "print extra stuff" ],
@@ -82,8 +82,8 @@ if ( $opt->col ) {
         if ( $c =~ $option_params_regex ) {
 
             # regex capture groups are named $1, $2, $3, $4, etc. Let's make them real boys
-            my ( $header, $column, $tool ) = ( $1, $2, $3 );
-            push( @column_mappings, { header => $header, column => $column, tool => $tool } );
+            my ( $header, $column, $tool, $tool_params ) = ( $1, $2, $3 );
+            push( @column_mappings, { header => $header, column => $column, tool => $tool, tool_params => $tool_params } );
 
             # verify the header column exists in the input file
             unless ( grep { /^$header$/ } @data_columns ) {
@@ -143,7 +143,7 @@ if ( $opt->map ) {
                 };
             }
         } else {
-            say "Parameter --map $m does not match the pattern <header>:<filename>[~<tool>]";
+            say "Parameter --map $m does not match the pattern <header>:<filename>[~<tool>[~<tool params>]]";
             exit 1;
         }
     }
@@ -171,7 +171,7 @@ foreach my $d (@$data) {
         my $datum = $d->{ $cm->{header} };
 
         # TODO Tool stuff
-        $datum = "$mungers$cm->{tool}"->munge($datum) if $cm->{tool};
+        $datum = "$mungers$cm->{tool}"->munge($datum, $cm->{tool_params} ) if $cm->{tool};
 
         $row->{ $cm->{column} } = $datum;
     }
@@ -181,7 +181,7 @@ foreach my $d (@$data) {
         chomp $datum;
 
         # TODO Tool stuff
-        $datum = "$mungers$afm->{tool}"->munge($datum) if $afm->{tool};
+        $datum = "$mungers$afm->{tool}"->munge($datum, $cm->{tool_params}) if $afm->{tool};
 
         $row->{ $afm->{header} } = $datum;
     }
