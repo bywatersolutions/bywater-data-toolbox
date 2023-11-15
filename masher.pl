@@ -14,14 +14,12 @@ use Module::Find;
 use Pod::Perldoc;
 
 use lib "$FindBin::Bin";
+use lib "/usr/share/koha/lib/";
 
-use Koha::Database;
+require Koha::Database;
 
 Readonly my $mungers             => "ToolBox::Mungers::";
 Readonly my $option_params_regex => qr/(\w+):([\w\/\.-]+)~?(\w+)?/;
-
-my $schema  = Koha::Database->new()->schema();
-my @sources = $schema->sources;
 
 my ( $opt, $usage ) = describe_options(
     '%c %o ',
@@ -46,6 +44,9 @@ my ( $opt, $usage ) = describe_options(
     [ 'help|h+',   "print usage message and exit", { shortcircuit => 1 } ],
     { show_defaults => 1 },
 );
+
+my $schema  = $opt->table ? Koha::Database->new()->schema() : undef;
+my @sources = $schema ? $schema->sources : undef;
 
 print( $usage->text ) if $opt->help;
 if ( $opt->help > 1 ) {
