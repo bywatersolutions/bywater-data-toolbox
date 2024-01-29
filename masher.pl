@@ -181,7 +181,7 @@ foreach my $d (@$data) {
         chomp $datum;
 
         # TODO Tool stuff
-        $datum = "$mungers$afm->{tool}"->munge($datum, $cm->{tool_params}) if $afm->{tool};
+        $datum = "$mungers$afm->{tool}"->munge($datum, $afm->{tool_params}) if $afm->{tool};
 
         $row->{ $afm->{header} } = $datum;
     }
