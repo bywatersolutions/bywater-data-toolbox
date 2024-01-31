@@ -20,6 +20,7 @@ require Koha::Database;
 
 Readonly my $mungers             => "ToolBox::Mungers::";
 Readonly my $option_params_regex => qr/(\w+):([\w\/\.-]+)~?(\w+)?~?(.*)?/;
+Readonly my $map_params_regex    => qr/(.+):(.+):(.+):(.+):(.+)/;
 
 my ( $opt, $usage ) = describe_options(
     '%c %o ',
@@ -37,7 +38,10 @@ my ( $opt, $usage ) = describe_options(
     [ 'static|s=s@', '<header>:<value> Repeatable. Inserts static data into the named field.' ],
     [
         'map|m=s@',
-        '<header>:<filename>[~<tool>[~tool-params]] Repeatable. Adds the single column of <filename> to the mashed data as <header>'
+        '<in file header>:<mapping filename>:<lookup mapping header>:<output mapping header>:<output header> Repeatable. '
+            . 'Read <in file header> from the incoming csv file, then in the map file <mapping filename>, '
+            . 'find the row in the column <lookup mapping header> that matches the value, '
+            . 'pull the value from <output mapping header> and write it in the output file as <output header>.'
     ],
     [],
     [ 'verbose|v', "print extra stuff" ],
@@ -46,7 +50,7 @@ my ( $opt, $usage ) = describe_options(
 );
 
 my $schema  = $opt->table ? Koha::Database->new()->schema() : undef;
-my @sources = $schema ? $schema->sources : undef;
+my @sources = $schema     ? $schema->sources                : undef;
 
 print( $usage->text ) if $opt->help;
 if ( $opt->help && $opt->help > 1 ) {
@@ -83,7 +87,10 @@ if ( $opt->col ) {
 
             # regex capture groups are named $1, $2, $3, $4, etc. Let's make them real boys
             my ( $header, $column, $tool, $tool_params ) = ( $1, $2, $3 );
-            push( @column_mappings, { header => $header, column => $column, tool => $tool, tool_params => $tool_params } );
+            push(
+                @column_mappings,
+                { header => $header, column => $column, tool => $tool, tool_params => $tool_params }
+            );
 
             # verify the header column exists in the input file
             unless ( grep { /^$header$/ } @data_columns ) {
@@ -115,24 +122,42 @@ if ( $opt->col ) {
 }
 
 # Validate the additional file mappings
+my $mapping_CSVs = {};
 my @additional_file_mappings;
 if ( $opt->map ) {
     foreach my $m ( @{ $opt->map } ) {
-        if ( $m =~ $option_params_regex ) {
+        if ( $m =~ $map_params_regex ) {
 
-            # regex capture groups are named $1, $2, $3, $4, etc. Let's make them real boys
-            my ( $header, $file, $tool ) = ( $1, $2, $3 );
+            my ( $in_file_header, $mapping_filename, $lookup_mapping_header, $output_mapping_header, $output_header ) =
+                ( $1, $2, $3, $4, $5 );
 
-            my @lines = read_file($file);
+            die "MISSING PARAMS FOR MAPPING && PARAMS PASSED: $m"
+                unless $in_file_header
+                && $mapping_filename
+                && $lookup_mapping_header
+                && $output_mapping_header
+                && $output_header;
+
+            $mapping_CSVs->{$mapping_filename} //= Text::CSV::Slurp->load( file => $mapping_filename );
 
             # There needs to be a one-to-one mapping of rows in the source file and additional files
-            if ( scalar @lines != scalar @$data ) {
-                say "The number of lines in $file doesn't match the number of lines in " . $opt->in;
-                say "$file has " . scalar @lines . " but file " . $opt->in . " has " . scalar @$data . " lines";
+            if ( scalar @{ $mapping_CSVs->{$mapping_filename} } != scalar @$data ) {
+                say "The number of lines in $mapping_filename doesn't match the number of lines in " . $opt->in;
+                say "$mapping_filename has " . @{ $mapping_CSVs->{$mapping_filename} };
+                say " but file " . $opt->in . " has " . scalar @$data . " lines";
                 exit 1;
             }
 
-            push( @additional_file_mappings, { header => $header, lines => \@lines, tool => $tool } );
+            push(
+                @additional_file_mappings,
+                {
+                    in_file_header        => $in_file_header,
+                    lookup_mapping_header => $lookup_mapping_header,
+                    output_mapping_header => $output_mapping_header,
+                    output_header         => $output_header,
+                    data                  => $mapping_CSVs->{$mapping_filename},
+                }
+            );
 
             if ($tool) {
                 try {
@@ -171,19 +196,32 @@ foreach my $d (@$data) {
         my $datum = $d->{ $cm->{header} };
 
         # TODO Tool stuff
-        $datum = "$mungers$cm->{tool}"->munge($datum, $cm->{tool_params} ) if $cm->{tool};
+        $datum = "$mungers$cm->{tool}"->munge( $datum, $cm->{tool_params} ) if $cm->{tool};
 
         $row->{ $cm->{column} } = $datum;
     }
 
     foreach my $afm (@additional_file_mappings) {
-        my $datum = shift @{ $afm->{lines} };
-        chomp $datum;
+        my $in_file_header        = $afm->{in_file_header};
+        my $lookup_mapping_header = $afm->{lookup_mapping_header};
+        my $output_mapping_header = $afm->{output_mapping_header};
+        my $output_header         = $afm->{output_header};
+        my $mapping_data          = $afm->{data};
 
-        # TODO Tool stuff
-        $datum = "$mungers$afm->{tool}"->munge($datum, $afm->{tool_params}) if $afm->{tool};
-
-        $row->{ $afm->{header} } = $datum;
+        # This is the key we are searching the mapping file for
+        my $lookup_datum = $d->{$in_file_header};
+        foreach my $m (@$mapping_data) {
+            # Loop through the rows of the mapping file looking for a match
+            # for the lookup datum in the column named $lookup_mapping_header.
+            # If we find a match, grab the datum from same row where the column is
+            # named $output_mapping_header.
+            # Finally, store that looked up datum in a new column in the output
+            # file. Name that column $output_header
+            if ( $m->{$lookup_mapping_header} eq $lookup_datum ) {
+                $row->{$output_header} = $m->{$output_mapping_header};
+                last; # We found a match, no use looping through the rest of the data
+            }
+        }
     }
 
     foreach my $sm (@static_mappings) {
