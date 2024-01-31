@@ -140,14 +140,6 @@ if ( $opt->map ) {
 
             $mapping_CSVs->{$mapping_filename} //= Text::CSV::Slurp->load( file => $mapping_filename );
 
-            # There needs to be a one-to-one mapping of rows in the source file and additional files
-            if ( scalar @{ $mapping_CSVs->{$mapping_filename} } != scalar @$data ) {
-                say "The number of lines in $mapping_filename doesn't match the number of lines in " . $opt->in;
-                say "$mapping_filename has " . @{ $mapping_CSVs->{$mapping_filename} };
-                say " but file " . $opt->in . " has " . scalar @$data . " lines";
-                exit 1;
-            }
-
             push(
                 @additional_file_mappings,
                 {
@@ -199,9 +191,12 @@ foreach my $d (@$data) {
         my $output_header         = $afm->{output_header};
         my $mapping_data          = $afm->{data};
 
+        $row->{$output_header} = q{};    # Set default value to empty string for the output file column
+
         # This is the key we are searching the mapping file for
         my $lookup_datum = $d->{$in_file_header};
         foreach my $m (@$mapping_data) {
+
             # Loop through the rows of the mapping file looking for a match
             # for the lookup datum in the column named $lookup_mapping_header.
             # If we find a match, grab the datum from same row where the column is
@@ -210,7 +205,7 @@ foreach my $d (@$data) {
             # file. Name that column $output_header
             if ( $m->{$lookup_mapping_header} eq $lookup_datum ) {
                 $row->{$output_header} = $m->{$output_mapping_header};
-                last; # We found a match, no use looping through the rest of the data
+                last;    # We found a match, no use looping through the rest of the data
             }
         }
     }
