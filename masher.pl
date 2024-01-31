@@ -158,15 +158,6 @@ if ( $opt->map ) {
                     data                  => $mapping_CSVs->{$mapping_filename},
                 }
             );
-
-            if ($tool) {
-                try {
-                    load "$mungers$tool";
-                } catch {
-                    say "Unable to find munger named $tool";
-                    exit 1;
-                };
-            }
         } else {
             say "Parameter --map $m does not match the pattern <header>:<filename>[~<tool>[~<tool params>]]";
             exit 1;
