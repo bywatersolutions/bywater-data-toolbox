@@ -69,7 +69,7 @@ jobs:
         mkdir -p env
         wget -O env/defaults.env https://gitlab.com/koha-community/koha-testing-docker/raw/main/env/defaults.env
         cp env/defaults.env .env
-        docker-compose pull
+        docker compose pull
 #    - name: Setup Debug Session
 #      uses: csexton/debugger-action@main
 
@@ -77,13 +77,13 @@ jobs:
       run: |
         pwd
         ls -alh
-        docker-compose -f docker-compose.yml -p koha up --detach
+        docker compose -f docker-compose.yml -p koha up --detach
         cd ..
         pwd
         ls -alh
         echo "`date`: Installing needed packages and modules not included with Koha and koha-testing-docker"
-        docker exec koha_koha_1 apt-get install -y libtest-pod-coverage-perl
-        while [ $? -ne 0 ]; do echo "STILL INSTALLING" && docker exec koha_koha_1 apt-get install -y libtest-pod-coverage-perl; done
+        docker exec koha-koha-1 apt-get install -y libtest-pod-coverage-perl
+        while [ $? -ne 0 ]; do echo "STILL INSTALLING" && docker exec koha-koha-1 apt-get install -y libtest-pod-coverage-perl; done
         echo "SLEEPING 3 MINUTES"
         sleep 60
         echo "1 MINUTE DONE"
@@ -95,20 +95,19 @@ jobs:
         echo "4 MINUTES DONE"
         echo "WAKING UP"
         echo "DOCKER LOGS"
-        docker logs koha_koha_1 2>&1
+        docker logs koha-koha-1 2>&1
         echo "/DOCKER LOGS"
-        docker cp $GITHUB_REPO/. koha_koha_1:/var/lib/koha/kohadev/toolbox
+        docker cp $GITHUB_REPO/. koha-koha-1:/var/lib/koha/kohadev/toolbox
         echo "LS KOHADEV"
-        docker exec koha_koha_1 bash -c 'ls /var/lib/koha/kohadev'
+        docker exec koha-koha-1 bash -c 'ls /var/lib/koha/kohadev'
         echo "LS TOOLBOX"
-        docker exec koha_koha_1 bash -c 'ls /var/lib/koha/kohadev/toolbox'
+        docker exec koha-koha-1 bash -c 'ls /var/lib/koha/kohadev/toolbox'
         echo "RUN TESTS"
-        docker exec koha_koha_1 bash -c 'prove -r -v /var/lib/koha/kohadev/toolbox/t'
+        docker exec koha-koha-1 bash -c 'prove -r -v /var/lib/koha/kohadev/toolbox/t'
         
     - name: Post test cleanup
       run: |
-        docker-compose down
-        docker rm -f $(docker ps -a -f "name=koha_" -q)
+        docker compose down
         docker volume prune -f
         docker image  prune -f
         rm docker-compose.yml
