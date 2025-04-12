@@ -3,8 +3,8 @@
 # Copyright 2025 ByWater Solutions
 #
 #---------------------------------
-#
-#
+# Expects: .csv or .txt file.
+# Does: Updates values specified in the .csv or .txt file.  First column as identifier (i.e. the WHERE statement).
 #---------------------------------
 
 use autodie;
