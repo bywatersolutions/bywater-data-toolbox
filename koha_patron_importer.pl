@@ -81,8 +81,6 @@ open my $error_fh, '>', $error_file or die "Cannot open file '$error_file': $!";
 # Disable autocommit
 $dbh->{AutoCommit} = 0;
 
-my $iteration_count = 0;
-
 foreach my $patron (@$patrons) {
     my $success = 1;
     my @messages;
@@ -167,12 +165,11 @@ foreach my $patron (@$patrons) {
     }
 
     $patrons_processed++;
-    $iteration_count++;
 
     # Commit every 500 iterations
-    if ( $iteration_count % $batch_commit_size == 0 ) {
+    if ( $patrons_processed % $batch_commit_size == 0 ) {
         $dbh->commit;
-        say "Committed after $iteration_count iterations" if $verbose;
+        say "Committed after $patrons_processed iterations" if $verbose;
     }
 
     say "Processed $patron->{cardnumber} ($borrowernumber) : $patrons_processed of " . scalar(@$patrons)
