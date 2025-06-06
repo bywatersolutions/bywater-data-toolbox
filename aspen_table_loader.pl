@@ -97,7 +97,7 @@ while (my $line=$csv->getline($io)){
    print "\r$j" unless ($j % 100);
    my @data = @$line;
    $debug and print Dumper(@data);
-   my $querystr = "INSERT INTO $table_name SET ";
+   my $querystr = "INSERT INTO $table_name (";
    my $exception = 0;
    for (my $i=1;$i<scalar(@data);$i++){
      next if ($fields[$i] eq "");
@@ -113,7 +113,7 @@ while (my $line=$csv->getline($io)){
       }
     } 
    $querystr =~ s/,$//;
-   $querystr .= " WHERE $fields[0] = '$data[0]'";
+   $querystr .= ") VALUES (";
    $debug and print $querystr."\n";
    if (!$exception){
       my $sth = $aspen_dbh->prepare($querystr);
